@@ -31,7 +31,7 @@ static constexpr uint64_t US_PER_SEC { 1000000llu };
 static constexpr uint64_t US_PER_MIN { 60ull * US_PER_SEC };
 static constexpr uint64_t SLEEP_DURATION_US { 60ull*US_PER_MIN };
 
-static constexpr TickType_t AWAKE_DURATION_LONG_MS  { 15000 };
+static constexpr TickType_t AWAKE_DURATION_LONG_MS  { 20000 };
 static constexpr TickType_t AWAKE_DURATION_SHORT_MS {  1000 };
 
 static constexpr char TAG[] = "doorbell";
@@ -70,7 +70,6 @@ static void enter_sleep() {
     fflush(stdout);
     if constexpr (ENABLE_SLEEP) {
         esp_deep_sleep_start();
-        printf("Sleep failed\n");
     }
 }
 
@@ -124,10 +123,6 @@ void app_main(void)
     vTaskPrioritySet(nullptr, 2);
     network_init();
 
-    auto voltage = battery_read_voltage_mv();
-    printf("Battery voltage %u mV\n", voltage);
-
-
     TickType_t awake_duration = pdMS_TO_TICKS(AWAKE_DURATION_LONG_MS);
 
     switch (esp_sleep_get_wakeup_cause()) {
@@ -150,7 +145,7 @@ void app_main(void)
 
     auto last_trigger = xTaskGetTickCount();
 
-    printf("Entering loop sleep_time: %lu\n", awake_duration);
+    printf("Entering loop\n");
     while (true) {
         if (gpio_get_level(BUTTON_PIN)==0) {
             trigger_dingdong();
@@ -158,13 +153,12 @@ void app_main(void)
         }
 
         vTaskDelay(pdMS_TO_TICKS(10));
-        if ((xTaskGetTickCount()-last_trigger)>awake_duration) {
+        if ( (xTaskGetTickCount()-last_trigger) > awake_duration ) {
             printf("Idle!\n");
             break;
         }
     }
     printf("Exit loop\n");
-
 
     network_term();
     enter_sleep();
